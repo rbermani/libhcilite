@@ -124,10 +124,10 @@
 #ifdef QUEUE_MACRO_DEBUG_TRACE
 /* Store the last 2 places the queue element or head was altered */
 struct qm_trace {
-    unsigned long	 lastline;
-    unsigned long	 prevline;
-    const char	*lastfile;
-    const char	*prevfile;
+	unsigned long	 lastline;
+	unsigned long	 prevline;
+	const char	*lastfile;
+	const char	*prevfile;
 };
 
 #define	TRACEBUF	struct qm_trace trace;
