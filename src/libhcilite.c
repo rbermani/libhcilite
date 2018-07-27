@@ -8,15 +8,10 @@
 
 #include "queue.h"
 #include "hci_sock.h"
+#include "hcilite.h"
 
 #define MGMT_BUF_LEN 512
 #define MGMT_HDR_SIZE (sizeof(struct mgmt_hdr))
-
-typedef void (*mgmt_request_func_t)(uint8_t status, uint16_t length,
-                                    const void *param, void *user_data);
-typedef void (*mgmt_notify_func_t)(uint16_t index, uint16_t length,
-                                   const void *param, void *user_data);
-typedef void (*mgmt_destroy_func_t)(void *user_data);
 
 typedef struct req_node {
     unsigned int id;
@@ -26,7 +21,7 @@ typedef struct req_node {
     bool destroy;
     void *buf;
     uint16_t len;
-    mgmt_request_func_t callback;
+    hcil_request_func_t callback;
     void *user_data;
     TAILQ_ENTRY(req_node) nodes;
 } req_node_t;
@@ -36,28 +31,14 @@ typedef struct notify_node {
     uint16_t event;
     uint16_t index;
     bool removed;
-    mgmt_notify_func_t callback;
-    mgmt_destroy_func_t destroy;
+    hcil_notify_func_t callback;
+    hcil_destroy_func_t destroy;
     void *user_data;
     TAILQ_ENTRY(notify_node) nodes;
 } notify_node_t;
 
 typedef TAILQ_HEAD(req_qs, req_node) req_q_t;
 typedef TAILQ_HEAD(notify_qs, notify_node) notify_q_t;
-
-struct mgmt {
-    int fd;
-    bool close_on_free;
-    void *buf;
-    uint16_t len;
-    unsigned int next_request_id;
-    unsigned int next_notify_id;
-    req_q_t *req_q;
-    req_q_t *reply_q;
-    notify_q_t *notify_q;
-    //TAILQ_HEAD(pending_qs, pending_node) pending_q;
-};
-
 
 static int hcil_create_req(uint16_t opcode, uint16_t index,
                            uint16_t len, const void *param, req_node_t * result)
@@ -122,7 +103,7 @@ static int hcil_write(struct mgmt *mgmt, req_node_t * req)
 
 static int hcil_push_req(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
                          uint16_t length, const void *param,
-                         mgmt_request_func_t callback,
+                         hcil_request_func_t callback,
                          req_q_t *head)
 {
     req_node_t *req;
@@ -187,7 +168,7 @@ static int hcil_pop_write(struct mgmt *mgmt)
 
 int hcil_send(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
               uint16_t length, const void *param,
-              mgmt_request_func_t callback)
+              hcil_request_func_t callback)
 {
     if (!mgmt) {
         return -EIO;
@@ -198,7 +179,7 @@ int hcil_send(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
 
 int hcil_send_nowait(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
                      uint16_t length, const void *param,
-                     mgmt_request_func_t callback)
+                     hcil_request_func_t callback)
 {
     if (!mgmt) {
         return -EIO;
@@ -209,7 +190,7 @@ int hcil_send_nowait(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
 
 int hcil_reply(struct mgmt *mgmt, uint16_t opcode, uint16_t index,
                uint16_t length, const void *param,
-               mgmt_request_func_t callback)
+               hcil_request_func_t callback)
 {
     if (!mgmt) {
         return -EIO;
